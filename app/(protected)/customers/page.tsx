@@ -45,40 +45,42 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Customers</h1>
         <Button onClick={() => startEdit()}>Add customer</Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Notes</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {(customers || []).map((c) => (
-            <TableRow key={c.id}>
-              <TableCell>{c.name}</TableCell>
-              <TableCell>{c.contact_info}</TableCell>
-              <TableCell>{c.notes}</TableCell>
-              <TableCell className="text-right space-x-2">
-                <Button size="sm" variant="outline" onClick={() => startEdit(c)}>Edit</Button>
-                <Button size="sm" variant="destructive" onClick={() => remove(c.id)}>Delete</Button>
-              </TableCell>
-            </TableRow>
-          ))}
-          {!customers.length && (
+      <div className="flex-1 overflow-auto mt-2">
+        <Table>
+          <TableHeader>
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">No customers</TableCell>
+              <TableHead>Name</TableHead>
+              <TableHead>Contact</TableHead>
+              <TableHead>Notes</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {(customers || []).map((c) => (
+              <TableRow key={c.id}>
+                <TableCell>{c.name}</TableCell>
+                <TableCell>{c.contact_info}</TableCell>
+                <TableCell>{c.notes}</TableCell>
+                <TableCell className="text-right space-x-2">
+                  <Button size="sm" variant="outline" onClick={() => startEdit(c)}>Edit</Button>
+                  <Button size="sm" variant="destructive" onClick={() => remove(c.id)}>Delete</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            {!customers.length && (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground">No customers</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -86,7 +88,7 @@ export default function CustomersPage() {
             <DialogTitle>{editing ? "Edit customer" : "Add customer"}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3">
-            <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input placeholder="Customer name" value={name} onChange={(e) => setName(e.target.value)} />
             <Input placeholder="Contact info" value={contact} onChange={(e) => setContact(e.target.value)} />
             <Input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             <div className="flex justify-end gap-2">

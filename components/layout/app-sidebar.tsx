@@ -20,16 +20,18 @@ const allItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [role, setRole] = useState<UserRole | null>(null);
+  const [role, setRole] = useState<UserRole>("staff");
 
   useEffect(() => {
+    let mounted = true;
     async function getRole() {
       const { data: { user } } = await supabaseBrowser.auth.getUser();
       if (!user) return;
       const { data } = await supabaseBrowser.from("users").select("role").eq("id", user.id).single();
-      setRole((data?.role as UserRole) ?? "staff");
+      if (mounted && data?.role) setRole(data.role as UserRole);
     }
     getRole();
+    return () => { mounted = false; };
   }, []);
 
   const items = allItems.filter((item) => {
@@ -38,7 +40,7 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="none">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>ERP</SidebarGroupLabel>

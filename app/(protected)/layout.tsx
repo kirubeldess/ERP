@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServer();
@@ -14,16 +14,16 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   return (
     <SidebarProvider>
-      <div className="grid grid-cols-[auto_1fr] min-h-screen">
+      <div className="flex min-h-screen w-full">
         <AppSidebar />
-        <div className="flex flex-col">
+        <SidebarInset className="flex-1 flex min-h-screen flex-col">
           <div className="flex items-center gap-2 p-2 border-b">
             <SidebarTrigger />
             <div className="ml-auto" />
             <Topbar />
           </div>
-          <main className="p-4">{children}</main>
-        </div>
+          <main className="flex-1 p-4 overflow-auto">{children}</main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
