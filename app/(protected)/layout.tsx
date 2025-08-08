@@ -4,6 +4,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { cookies } from "next/headers";
+import { MobileNav } from "@/components/layout/mobile-nav";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -19,7 +20,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex-1 flex min-h-screen flex-col">
-          <div className="flex items-center gap-2 p-2 border-b">
+          <MobileNav />
+          <div className="hidden md:flex items-center gap-2 p-2 border-b">
             <SidebarTrigger />
             <div className="ml-auto" />
             <Topbar />

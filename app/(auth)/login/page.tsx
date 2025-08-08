@@ -59,7 +59,7 @@ function LoginInner() {
           <Button disabled={loading} type="submit" className="w-full">
             {loading ? "Signing in..." : "Sign in"}
           </Button>
-          <Button type="button" variant="link" onClick={() => router.push("/signup")} className="w-full">Create account</Button>
+          {/* <Button type="button" variant="link" onClick={() => router.push("/signup")} className="w-full">Create account</Button> */}
         </form>
       </CardContent>
     </Card>
