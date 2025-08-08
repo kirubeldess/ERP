@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div />}> 
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -19,15 +29,32 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
-    setLoading(false);
+    const { data, error } = await supabaseBrowser.auth.signInWithPassword({ email, password });
     if (error) {
+      setLoading(false);
       setError(error.message);
-    } else {
-      const redirectTo = searchParams.get("redirect") || "/dashboard";
-      // Use hard navigation to ensure middleware/server read fresh auth cookies
-      window.location.href = redirectTo;
+      return;
     }
+
+    const session = data.session;
+    if (session) {
+      // Optional: set cookies for middleware detection if present
+      try {
+        await fetch("/api/auth/set", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            expires_at: session.expires_at,
+          }),
+        });
+      } catch {}
+    }
+
+    setLoading(false);
+    const redirectTo = searchParams.get("redirect") || "/dashboard";
+    window.location.href = redirectTo;
   }
 
   return (
