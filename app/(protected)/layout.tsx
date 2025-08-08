@@ -15,10 +15,13 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect("/login");
 
+  const { data: userRow } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
+  const initialRole = (userRow?.role as "admin" | "manager" | "staff") ?? "staff";
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
-        <AppSidebar />
+        <AppSidebar initialRole={initialRole} />
         <SidebarInset className="flex-1 flex min-h-screen flex-col">
           <MobileNav />
           <div className="hidden md:flex items-center gap-2 p-2 border-b">

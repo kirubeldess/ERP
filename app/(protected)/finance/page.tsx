@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { formatMoney } from "@/lib/currency";
 
 export default function FinancePage() {
   const [ledger, setLedger] = useState<any[]>([]);
@@ -42,7 +43,7 @@ export default function FinancePage() {
         <Button onClick={() => setOpen(true)}>Add entry</Button>
       </div>
 
-      <ChartContainer className="h-64" config={{ value: { label: "Net" } }}>
+      <ChartContainer className="h-64" config={{ value: { label: "Net (ETB)" } }}>
         <AreaChart data={series}>
           <CartesianGrid vertical={false} />
           <XAxis dataKey="date" hide />
@@ -67,7 +68,7 @@ export default function FinancePage() {
               <TableCell>{new Date(l.date).toLocaleDateString()}</TableCell>
               <TableCell className={l.type === "income" ? "text-green-600" : "text-red-600"}>{l.type}</TableCell>
               <TableCell>{l.description}</TableCell>
-              <TableCell className="text-right">${l.amount?.toFixed(2)}</TableCell>
+              <TableCell className="text-right">{formatMoney(l.amount)}</TableCell>
             </TableRow>
           ))}
           {!ledger.length && (
@@ -91,7 +92,7 @@ export default function FinancePage() {
                 <SelectItem value="expense">Expense</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="number" placeholder="Amount" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+            <Input type="number" placeholder="Amount in Birr" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
             <Input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>

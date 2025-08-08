@@ -49,6 +49,14 @@ export async function POST(req: Request) {
 
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
+    // Insert matching income ledger entry
+    await supabaseAdmin.from("ledger").insert({
+      type: "income",
+      amount: finalAmount,
+      date: new Date().toISOString(),
+      description: `Sale: ${finalName} x${q}`,
+    });
+
     return NextResponse.json({ invoice: created, product: selectedProduct });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Unknown error" }, { status: 500 });

@@ -9,9 +9,9 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import type { UserRole } from "@/lib/rbac";
 import { navItems as all } from "@/components/layout/nav-items";
 
-export function AppSidebar() {
+export function AppSidebar({ initialRole = "staff" as UserRole }: { initialRole?: UserRole }) {
   const pathname = usePathname();
-  const [role, setRole] = useState<UserRole>("staff");
+  const [role, setRole] = useState<UserRole>(initialRole);
 
   useEffect(() => {
     let mounted = true;
@@ -40,7 +40,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href} className={cn("gap-2")}>
+                    <Link href={item.href} className={cn("gap-2")}> 
                       <item.icon className="h-4 w-4" />
                       <span>{item.label}</span>
                     </Link>

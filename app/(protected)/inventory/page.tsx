@@ -8,26 +8,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type Product = { id: string; name: string; category: string | null; quantity: number; price: number; warehouse_id: string | null };
+type Product = { id: string; name: string; category: string | null; quantity: number; price: number; warehouse_id: string | null; supplier_id?: string | null };
 
 type Warehouse = { id: string; name: string };
+
+type Supplier = { id: string; name: string };
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
-  const [form, setForm] = useState<Partial<Product>>({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null });
+  const [form, setForm] = useState<Partial<Product>>({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null, supplier_id: null });
 
   async function load() {
-    const [{ data: prod }, { data: wh } ] = await Promise.all([
+    const [{ data: prod }, { data: wh }, { data: su } ] = await Promise.all([
       supabaseBrowser.from("products").select("*").order("name"),
       supabaseBrowser.from("warehouses").select("id, name").order("name"),
+      supabaseBrowser.from("suppliers").select("id, name").order("name"),
     ]);
     setProducts((prod as Product[]) || []);
     setWarehouses((wh as Warehouse[]) || []);
+    setSuppliers((su as Supplier[]) || []);
   }
 
   useEffect(() => {
@@ -35,7 +40,6 @@ export default function InventoryPage() {
     const channel = supabaseBrowser
       .channel("products-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "products" }, (payload) => {
-        // Optimistic: apply row change locally
         if (payload.eventType === "INSERT") {
           setProducts((prev) => [payload.new as Product, ...prev]);
         } else if (payload.eventType === "UPDATE") {
@@ -57,6 +61,7 @@ export default function InventoryPage() {
         quantity: form.quantity,
         price: form.price,
         warehouse_id: form.warehouse_id,
+        supplier_id: form.supplier_id,
       }).eq("id", editing.id).select("*").single();
       if (data) setProducts((prev) => prev.map((p) => (p.id === data.id ? (data as Product) : p)));
     } else {
@@ -66,13 +71,14 @@ export default function InventoryPage() {
         quantity: form.quantity,
         price: form.price,
         warehouse_id: form.warehouse_id,
+        supplier_id: form.supplier_id,
       }).select("*").single();
       if (data) setProducts((prev) => [data as Product, ...prev]);
     }
     setSaving(false);
     setOpen(false);
     setEditing(null);
-    setForm({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null });
+    setForm({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null, supplier_id: null });
   }
 
   async function remove(id: string) {
@@ -88,7 +94,7 @@ export default function InventoryPage() {
       setForm(p);
     } else {
       setEditing(null);
-      setForm({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null });
+      setForm({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null, supplier_id: null });
     }
     setOpen(true);
   }
@@ -110,6 +116,7 @@ export default function InventoryPage() {
               <TableHead>Name</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Warehouse</TableHead>
+              <TableHead>Supplier</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -121,6 +128,7 @@ export default function InventoryPage() {
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{p.category}</TableCell>
                 <TableCell>{warehouses.find((w) => w.id === p.warehouse_id)?.name || "—"}</TableCell>
+                <TableCell>{suppliers.find((s) => s.id === (p as any).supplier_id)?.name || "—"}</TableCell>
                 <TableCell className="text-right">{p.quantity}</TableCell>
                 <TableCell className="text-right">${p.price?.toFixed(2)}</TableCell>
                 <TableCell className="text-right space-x-2">
@@ -131,7 +139,7 @@ export default function InventoryPage() {
             ))}
             {!products.length && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">No products</TableCell>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">No products</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -163,6 +171,16 @@ export default function InventoryPage() {
               <SelectContent>
                 {warehouses.map((w) => (
                   <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={form.supplier_id ?? undefined} onValueChange={(v) => setForm({ ...form, supplier_id: v })}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select supplier" />
+              </SelectTrigger>
+              <SelectContent>
+                {suppliers.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
