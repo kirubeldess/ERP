@@ -10,7 +10,8 @@ export function Topbar() {
 
   async function signOut() {
     await supabaseBrowser.auth.signOut();
-    router.replace("/login");
+    await fetch("/api/auth/signout", { method: "POST" });
+    window.location.href = "/login";
   }
 
   return (

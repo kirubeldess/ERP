@@ -6,10 +6,10 @@ export async function middleware(req: NextRequest) {
 
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
 
-  // Detect any Supabase cookie set by @supabase/ssr or helpers
-  const hasSupabaseCookie = req.cookies.getAll().some((c) => c.name.startsWith("sb-"));
+  // Only treat as authenticated if an access token cookie exists
+  const hasAccess = Boolean(req.cookies.get("sb-access-token")?.value);
 
-  if (hasSupabaseCookie && isAuthRoute) {
+  if (hasAccess && isAuthRoute) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }

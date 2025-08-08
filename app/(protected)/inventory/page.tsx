@@ -147,8 +147,14 @@ export default function InventoryPage() {
             <Input placeholder="Product name" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Input placeholder="Category (e.g. Electronics)" value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="number" placeholder="Quantity" value={form.quantity ?? 0} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
-              <Input type="number" placeholder="Unit price" value={form.price ?? 0} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
+              <div className="flex items-center gap-2">
+                <span>Quantity</span>
+                <Input type="number" placeholder="Quantity" value={form.quantity ?? 0} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Price</span>
+                <Input type="number" placeholder="Price" value={form.price ?? 0} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
+              </div>
             </div>
             <Select value={form.warehouse_id ?? undefined} onValueChange={(v) => setForm({ ...form, warehouse_id: v })}>
               <SelectTrigger>

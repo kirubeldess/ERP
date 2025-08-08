@@ -7,7 +7,8 @@ export async function POST(req: Request) {
   }
   const res = NextResponse.json({ ok: true });
   const expires = expires_at ? new Date(expires_at * 1000) : undefined;
-  res.cookies.set({ name: "sb-access-token", value: access_token, httpOnly: false, sameSite: "lax", path: "/", expires });
-  res.cookies.set({ name: "sb-refresh-token", value: refresh_token, httpOnly: false, sameSite: "lax", path: "/" });
+  const isProd = process.env.NODE_ENV === "production";
+  res.cookies.set({ name: "sb-access-token", value: access_token, httpOnly: true, sameSite: "lax", secure: isProd, path: "/", expires });
+  res.cookies.set({ name: "sb-refresh-token", value: refresh_token, httpOnly: true, sameSite: "lax", secure: isProd, path: "/" });
   return res;
 } 

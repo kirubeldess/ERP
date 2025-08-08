@@ -172,13 +172,19 @@ export default function SalesPage() {
               <Input placeholder="Or type product name" value={productName} onChange={(e) => { setProductName(e.target.value); setProductId(""); }} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <Input type="number" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
-              <Input type="number" placeholder="Amount (auto if product selected)" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+              <div className="flex items-center gap-2">
+                <span>Quantity</span>
+                <Input type="number" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span>Amount</span>
+                <Input type="number" placeholder="Amount (auto if product selected)" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button disabled={saving} onClick={addInvoice}>Create</Button>
             </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

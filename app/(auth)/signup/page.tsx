@@ -52,9 +52,9 @@ export default function SignupPage() {
           <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
           {error && <div className="text-sm text-destructive">{error}</div>}
-          <Button disabled={loading} type="submit" className="w-full">
+          {/* <Button disabled={loading} type="submit" className="w-full">
             {loading ? "Creating..." : "Sign up"}
-          </Button>
+          </Button> */}
           <Button type="button" variant="link" onClick={() => router.push("/login")} className="w-full">Have an account? Sign in</Button>
         </form>
       </CardContent>
