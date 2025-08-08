@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ERP Prototype
 
-## Getting Started
+Tech stack: Next.js App Router, Tailwind (Shadcn), Supabase, Recharts.
 
-First, run the development server:
+## Setup
+1. Copy `.env` and set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+2. Run `npm i` then `npm run dev`.
+3. In Supabase SQL editor, run the schema below.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Database schema
+```sql
+create table if not exists users (
+  id uuid primary key,
+  name text,
+  email text unique,
+  role text check (role in ('admin','manager','staff')) default 'staff'
+);
+
+create table if not exists warehouses (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  location text
+);
+
+create table if not exists products (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category text,
+  quantity int default 0,
+  price numeric default 0,
+  warehouse_id uuid references warehouses(id) on delete set null
+);
+
+create table if not exists customers (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  contact_info text,
+  notes text
+);
+
+create table if not exists leads (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete set null,
+  status text,
+  notes text
+);
+
+create table if not exists invoices (
+  id uuid primary key default gen_random_uuid(),
+  customer_id uuid references customers(id) on delete set null,
+  date timestamptz default now(),
+  amount numeric default 0,
+  status text default 'pending'
+);
+
+create table if not exists ledger (
+  id uuid primary key default gen_random_uuid(),
+  type text check (type in ('income','expense')) not null,
+  amount numeric not null,
+  date timestamptz default now(),
+  description text
+);
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+- Auth via Supabase; middleware protects app routes.
+- Realtime on `products` and `invoices`.
+- Sidebar is collapsible; light/dark theme toggle in topbar.
