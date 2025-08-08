@@ -3,14 +3,16 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { cookies } from "next/headers";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServer();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) redirect("/login");
+  const cookieStore = await cookies();
+  const hasSession = Boolean(cookieStore.get("SESSION_ID")?.value);
+  if (!hasSession) redirect("/login");
 
-  // Preload user row to help client fetch role quickly
-  await supabase.from("users").select("id").eq("id", session.user.id).maybeSingle();
+  const supabase = await createSupabaseServer();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error || !user) redirect("/login");
 
   return (
     <SidebarProvider>

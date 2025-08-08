@@ -6,10 +6,9 @@ export async function middleware(req: NextRequest) {
 
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/signup");
 
-  // Only treat as authenticated if an access token cookie exists
-  const hasAccess = Boolean(req.cookies.get("sb-access-token")?.value);
+  const hasSession = Boolean(req.cookies.get("SESSION_ID")?.value);
 
-  if (hasAccess && isAuthRoute) {
+  if (hasSession && isAuthRoute) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }

@@ -1,17 +1,28 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { getSessionById } from "@/lib/session";
 
 export async function createSupabaseServer() {
   const cookieStore = await cookies();
+  const sessionId = cookieStore.get("SESSION_ID")?.value;
 
-  const supabase = createServerClient(
+  let accessToken: string | undefined;
+  if (sessionId) {
+    const sess = await getSessionById(sessionId);
+    accessToken = sess?.access_token || undefined;
+  }
+
+  const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
+      global: {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
       },
     }
   );
