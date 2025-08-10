@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,55 +24,38 @@ export default function InventoryPage() {
   const [form, setForm] = useState<Partial<Product>>({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null, supplier_id: null });
 
   async function load() {
-    const [{ data: prod }, { data: wh }, { data: su } ] = await Promise.all([
-      supabaseBrowser.from("products").select("*").order("name"),
-      supabaseBrowser.from("warehouses").select("id, name").order("name"),
-      supabaseBrowser.from("suppliers").select("id, name").order("name"),
+    const [prodRes, whRes, suRes] = await Promise.all([
+      fetch("/api/products/list").then((r) => r.json()),
+      fetch("/api/warehouses/list").then((r) => r.json()).catch(() => ({ data: [] })),
+      fetch("/api/suppliers/list").then((r) => r.json()).catch(() => ({ data: [] })),
     ]);
-    setProducts((prod as Product[]) || []);
-    setWarehouses((wh as Warehouse[]) || []);
-    setSuppliers((su as Supplier[]) || []);
+    setProducts((prodRes.data as Product[]) || []);
+    setWarehouses((whRes.data as Warehouse[]) || []);
+    setSuppliers((suRes.data as Supplier[]) || []);
   }
 
-  useEffect(() => {
-    load();
-    const channel = supabaseBrowser
-      .channel("products-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, (payload) => {
-        if (payload.eventType === "INSERT") {
-          setProducts((prev) => [payload.new as Product, ...prev]);
-        } else if (payload.eventType === "UPDATE") {
-          setProducts((prev) => prev.map((p) => (p.id === (payload.new as any).id ? (payload.new as Product) : p)));
-        } else if (payload.eventType === "DELETE") {
-          setProducts((prev) => prev.filter((p) => p.id !== (payload.old as any).id));
-        }
-      })
-      .subscribe();
-    return () => { supabaseBrowser.removeChannel(channel); };
-  }, []);
+  useEffect(() => { load(); }, []);
 
   async function save() {
     setSaving(true);
     if (editing) {
-      const { data } = await supabaseBrowser.from("products").update({
-        name: form.name,
-        category: form.category,
-        quantity: form.quantity,
-        price: form.price,
-        warehouse_id: form.warehouse_id,
-        supplier_id: form.supplier_id,
-      }).eq("id", editing.id).select("*").single();
-      if (data) setProducts((prev) => prev.map((p) => (p.id === data.id ? (data as Product) : p)));
+      const res = await fetch(`/api/products/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editing.id, ...form }),
+      });
+      const body = await res.json();
+      if (!res.ok) alert(body.error || "Failed to save");
+      if (body.data) setProducts((prev) => prev.map((p) => (p.id === body.data.id ? body.data : p)));
     } else {
-      const { data } = await supabaseBrowser.from("products").insert({
-        name: form.name,
-        category: form.category,
-        quantity: form.quantity,
-        price: form.price,
-        warehouse_id: form.warehouse_id,
-        supplier_id: form.supplier_id,
-      }).select("*").single();
-      if (data) setProducts((prev) => [data as Product, ...prev]);
+      const res = await fetch(`/api/products/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const body = await res.json();
+      if (!res.ok) alert(body.error || "Failed to create");
+      if (body.data) setProducts((prev) => [body.data, ...prev]);
     }
     setSaving(false);
     setOpen(false);
@@ -82,10 +64,10 @@ export default function InventoryPage() {
   }
 
   async function remove(id: string) {
-    const prev = products;
+    const res = await fetch(`/api/products/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const body = await res.json();
+    if (!res.ok) alert(body.error || "Failed to delete");
     setProducts((p) => p.filter((x) => x.id !== id));
-    const { error } = await supabaseBrowser.from("products").delete().eq("id", id);
-    if (error) setProducts(prev);
   }
 
   function startEdit(p?: Product) {
@@ -130,7 +112,7 @@ export default function InventoryPage() {
                 <TableCell>{warehouses.find((w) => w.id === p.warehouse_id)?.name || "—"}</TableCell>
                 <TableCell>{suppliers.find((s) => s.id === (p as any).supplier_id)?.name || "—"}</TableCell>
                 <TableCell className="text-right">{p.quantity}</TableCell>
-                <TableCell className="text-right">${p.price?.toFixed(2)}</TableCell>
+                <TableCell className="text-right">{p.price?.toFixed(2)}</TableCell>
                 <TableCell className="text-right space-x-2">
                   <Button size="sm" variant="outline" onClick={() => startEdit(p)}>Edit</Button>
                   <Button size="sm" variant="destructive" onClick={() => remove(p.id)}>Delete</Button>
@@ -155,14 +137,8 @@ export default function InventoryPage() {
             <Input placeholder="Product name" value={form.name ?? ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <Input placeholder="Category (e.g. Electronics)" value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} />
             <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <span>Quantity</span>
-                <Input type="number" placeholder="Quantity" value={form.quantity ?? 0} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
-              </div>
-              <div className="flex items-center gap-2">
-                <span>Price</span>
-                <Input type="number" placeholder="Price" value={form.price ?? 0} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
-              </div>
+              <Input type="number" placeholder="Quantity" value={form.quantity ?? 0} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} />
+              <Input type="number" placeholder="Unit price" value={form.price ?? 0} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
             </div>
             <Select value={form.warehouse_id ?? undefined} onValueChange={(v) => setForm({ ...form, warehouse_id: v })}>
               <SelectTrigger>

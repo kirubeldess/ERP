@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+function isUuid(v: any) {
+  return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
+}
+
 export async function POST(req: Request) {
   try {
     const { customerId, productId, productName, quantity, amount } = await req.json();
@@ -33,23 +37,24 @@ export async function POST(req: Request) {
       selectedProduct.quantity = newQty;
     }
 
+    const customer_uuid = isUuid(customerId) ? customerId : null;
+
     const { data: created, error: insErr } = await supabaseAdmin
       .from("invoices")
       .insert({
-        customer_id: customerId || null,
+        customer_id: customer_uuid,
         amount: finalAmount,
+        date: new Date().toISOString(),
+        status: "paid",
         product_id: selectedProduct?.id || null,
         product_name: finalName,
         quantity: q,
-        date: new Date().toISOString(),
-        status: "paid",
       })
-      .select("*")
+      .select("id, customer_id, date, amount, status, product_id, product_name, quantity")
       .single();
 
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
-    // Insert matching income ledger entry
     await supabaseAdmin.from("ledger").insert({
       type: "income",
       amount: finalAmount,

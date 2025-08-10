@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,28 +21,32 @@ export default function SalesPage() {
   const [productName, setProductName] = useState<string>("");
   const [quantity, setQuantity] = useState<number | "">(1);
 
-  async function load() {
-    const [{ data: inv }, { data: ld }, { data: prod }] = await Promise.all([
-      supabaseBrowser.from("invoices").select("id, customer_id, date, amount, status, product_id, product_name, quantity").order("date", { ascending: false }).limit(50),
-      supabaseBrowser.from("leads").select("id, customer_id, status, notes").limit(50),
-      supabaseBrowser.from("products").select("id, name, quantity, price").order("name"),
-    ]);
-    setInvoices(inv || []);
-    setLeads(ld || []);
-    setProducts(prod || []);
+  function pick<T = any>(res: any): T[] {
+    if (!res) return [];
+    if (Array.isArray(res)) return res as T[];
+    if (Array.isArray(res.data)) return res.data as T[];
+    return [];
   }
 
-  useEffect(() => {
-    load();
-    const ch = supabaseBrowser
-      .channel("invoices-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "invoices" }, (payload) => {
-        if (payload.eventType === "INSERT") setInvoices((prev) => [payload.new as any, ...prev]);
-        if (payload.eventType === "UPDATE") setInvoices((prev) => prev.map((r) => (r.id === (payload.new as any).id ? payload.new : r)));
-      })
-      .subscribe();
-    return () => { supabaseBrowser.removeChannel(ch); };
-  }, []);
+  async function load() {
+    try {
+      const ts = Date.now();
+      const [invRes, ldRes, prodRes] = await Promise.all([
+        fetch(`/api/invoices/list?ts=${ts}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
+        fetch(`/api/leads/list?ts=${ts}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
+        fetch(`/api/products/list?ts=${ts}`, { cache: "no-store" }).then((r) => r.json()).catch(() => []),
+      ]);
+      setInvoices(pick(invRes));
+      setLeads(pick(ldRes));
+      setProducts(pick(prodRes));
+    } catch {
+      setInvoices([]);
+      setLeads([]);
+      setProducts([]);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
 
   async function addInvoice() {
     setSaving(true);
@@ -61,11 +64,12 @@ export default function SalesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const body = await res.json();
+    const body = await res.json().catch(() => ({}));
 
     if (res.ok) {
-      if (body.invoice) setInvoices((prev: any[]) => [body.invoice, ...prev]);
-      if (body.product) setProducts((prev: any[]) => prev.map((p) => (p.id === body.product.id ? body.product : p)));
+      await load();
+    } else {
+      alert((body as any).error || "Failed to create invoice");
     }
 
     setSaving(false);
@@ -77,7 +81,7 @@ export default function SalesPage() {
     setQuantity(1);
   }
 
-  const productOptions = useMemo(() => products.map((p) => ({ value: p.id, label: `${p.name} (qty ${p.quantity})` })), [products]);
+  const productOptions = useMemo(() => products.map((p: any) => ({ value: p.id, label: `${p.name} (qty ${p.quantity})` })), [products]);
 
   return (
     <div className="h-full flex flex-col gap-6">
@@ -88,7 +92,10 @@ export default function SalesPage() {
 
       <div className="grid gap-6 md:grid-cols-2 flex-1">
         <div className="min-h-0 flex flex-col">
-          <h2 className="mb-2 font-medium">Recent invoices</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-medium">Recent invoices</h2>
+            <Button variant="outline" size="sm" onClick={load}>Refresh</Button>
+          </div>
           <div className="flex-1 overflow-auto">
             <Table>
               <TableHeader>
@@ -162,7 +169,7 @@ export default function SalesPage() {
             <div className="grid gap-2">
               <Select value={productId || undefined} onValueChange={(v) => { setProductId(v); setProductName(""); }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select product from inventory (optional)" />
+                  <SelectValue placeholder="Select product (optional, for stock decrement)" />
                 </SelectTrigger>
                 <SelectContent>
                   {productOptions.map((opt) => (
@@ -170,11 +177,11 @@ export default function SalesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Input placeholder="Or type product name" value={productName} onChange={(e) => { setProductName(e.target.value); setProductId(""); }} />
+              <Input placeholder="Or type product name (note only)" value={productName} onChange={(e) => { setProductName(e.target.value); setProductId(""); }} />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Input type="number" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
-              <Input type="number" placeholder="Amount in Birr (auto if product selected)" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
+              <Input type="number" placeholder="Amount in Birr" value={amount} onChange={(e) => setAmount(Number(e.target.value))} />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
