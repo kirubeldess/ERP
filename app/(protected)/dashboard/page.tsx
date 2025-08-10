@@ -20,9 +20,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }
   })();
 
+  const { data: userRes } = await supabase.auth.getUser();
+  const user = userRes.user;
+  if (!user) {
+    return null;
+  }
+
   const [invRes, ledgerRes] = await Promise.all([
-    supabase.from("invoices").select("date, amount, product_id, product_name, quantity").gte("date", since.toISOString()).order("date", { ascending: true }),
-    supabase.from("ledger").select("date, amount, type").gte("date", since.toISOString()).order("date", { ascending: true }),
+    supabase.from("invoices").select("date, amount, product_id, product_name, quantity").eq("user_id", user.id).gte("date", since.toISOString()).order("date", { ascending: true }),
+    supabase.from("ledger").select("date, amount, type").eq("user_id", user.id).gte("date", since.toISOString()).order("date", { ascending: true }),
   ]);
 
   let best: any[] = [];
@@ -33,6 +39,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const { data } = await supabase
       .from("invoices")
       .select("product_id, product_name, quantity")
+      .eq("user_id", user.id)
       .gte("date", since.toISOString());
     const counts: Record<string, { name: string; qty: number }> = {};
     (data || []).forEach((r: any) => {
