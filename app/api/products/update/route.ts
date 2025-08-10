@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
+  const supabase = await createSupabaseServer();
+  const { data: userRes } = await supabase.auth.getUser();
+  const user = userRes.user;
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json();
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("products")
     .update({
       name: body.name,
@@ -14,6 +19,7 @@ export async function POST(req: Request) {
       supplier_id: body.supplier_id || null,
     })
     .eq("id", body.id)
+    .eq("user_id", user.id)
     .select("*")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

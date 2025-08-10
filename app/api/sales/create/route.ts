@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 function isUuid(v: any) {
   return typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
@@ -7,16 +7,22 @@ function isUuid(v: any) {
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createSupabaseServer();
+    const { data: userRes } = await supabase.auth.getUser();
+    const user = userRes.user;
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
     const { customerId, productId, productName, quantity, amount } = await req.json();
 
     const q = Math.max(1, Number(quantity) || 1);
     let selectedProduct: any = null;
 
     if (productId) {
-      const { data: prod, error: prodErr } = await supabaseAdmin
+      const { data: prod, error: prodErr } = await supabase
         .from("products")
         .select("id, name, quantity, price")
         .eq("id", productId)
+        .eq("user_id", user.id)
         .single();
       if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 400 });
       selectedProduct = prod;
@@ -29,19 +35,21 @@ export async function POST(req: Request) {
 
     if (selectedProduct) {
       const newQty = Math.max(0, Number(selectedProduct.quantity || 0) - q);
-      const { error: updErr } = await supabaseAdmin
+      const { error: updErr } = await supabase
         .from("products")
         .update({ quantity: newQty })
-        .eq("id", selectedProduct.id);
+        .eq("id", selectedProduct.id)
+        .eq("user_id", user.id);
       if (updErr) return NextResponse.json({ error: updErr.message }, { status: 400 });
       selectedProduct.quantity = newQty;
     }
 
     const customer_uuid = isUuid(customerId) ? customerId : null;
 
-    const { data: created, error: insErr } = await supabaseAdmin
+    const { data: created, error: insErr } = await supabase
       .from("invoices")
       .insert({
+        user_id: user.id,
         customer_id: customer_uuid,
         amount: finalAmount,
         date: new Date().toISOString(),
@@ -55,7 +63,8 @@ export async function POST(req: Request) {
 
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 400 });
 
-    await supabaseAdmin.from("ledger").insert({
+    await supabase.from("ledger").insert({
+      user_id: user.id,
       type: "income",
       amount: finalAmount,
       date: new Date().toISOString(),
