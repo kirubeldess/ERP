@@ -62,7 +62,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   }));
 
   const totalSales = sales.reduce((acc: number, r: any) => acc + (Number(r.amount) || 0), 0);
-  const net = ledger.reduce((acc: number, r: any) => acc + (r.type === "income" ? Number(r.amount) : -Number(r.amount)), 0);
+  const ledgerIncome = ledger.reduce((acc: number, r: any) => acc + (r.type === "income" ? Number(r.amount) || 0 : 0), 0);
+  const ledgerExpense = ledger.reduce((acc: number, r: any) => acc + (r.type === "expense" ? Number(r.amount) || 0 : 0), 0);
+  const net = ledgerIncome + totalSales - ledgerExpense;
 
   return (
     <div className="space-y-6">
@@ -88,7 +90,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">{formatMoney(net)}</div>
-            <div className="text-sm text-muted-foreground">Income minus Expense in selected range</div>
+            <div className="text-sm text-muted-foreground">(Ledger income + Sales) minus Expenses</div>
           </CardContent>
         </Card>
       </div>

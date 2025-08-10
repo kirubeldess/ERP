@@ -8,10 +8,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
-    .from("suppliers")
+    .from("customers")
     .select("id, name, contact_info, notes")
     .eq("user_id", user.id)
     .order("name");
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ data });
 } 

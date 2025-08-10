@@ -29,9 +29,12 @@ export async function POST(req: Request) {
     }
 
     const finalName: string = selectedProduct?.name || productName || "Item";
-    const finalAmount: number = typeof amount === "number" && amount > 0
-      ? amount
-      : (selectedProduct ? Number(selectedProduct.price || 0) * q : 0);
+
+    // Force server-side calculation: when a product is selected, use quantity × product.price
+    // Only use provided amount when no product is selected
+    const finalAmount: number = selectedProduct
+      ? Number(selectedProduct.price || 0) * q
+      : (typeof amount === "number" && amount > 0 ? Number(amount) : 0);
 
     if (selectedProduct) {
       const newQty = Math.max(0, Number(selectedProduct.quantity || 0) - q);

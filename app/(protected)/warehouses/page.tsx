@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,8 +14,9 @@ export default function WarehousesPage() {
   const [location, setLocation] = useState("");
 
   async function load() {
-    const { data } = await supabaseBrowser.from("warehouses").select("id, name, location").order("name");
-    setRows(data || []);
+    const res = await fetch("/api/warehouses/list", { cache: "no-store" });
+    const body = await res.json();
+    setRows((body?.data as any[]) || []);
   }
 
   useEffect(() => { load(); }, []);
@@ -28,12 +28,12 @@ export default function WarehousesPage() {
   }
 
   async function save() {
-    if (editing) await supabaseBrowser.from("warehouses").update({ name, location }).eq("id", editing.id);
-    else await supabaseBrowser.from("warehouses").insert({ name, location });
+    if (editing) await fetch("/api/warehouses/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing.id, name, location }) });
+    else await fetch("/api/warehouses/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, location }) });
     setOpen(false); setEditing(null); setName(""); setLocation(""); load();
   }
 
-  async function remove(id: string) { await supabaseBrowser.from("warehouses").delete().eq("id", id); load(); }
+  async function remove(id: string) { await fetch("/api/warehouses/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); load(); }
 
   return (
     <div className="space-y-4">

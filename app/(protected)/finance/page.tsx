@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,14 +18,19 @@ export default function FinancePage() {
   const [description, setDescription] = useState("");
 
   async function load() {
-    const { data } = await supabaseBrowser.from("ledger").select("id, type, amount, date, description").order("date", { ascending: true }).limit(50);
-    setLedger(data || []);
+    const res = await fetch("/api/ledger/list", { cache: "no-store" });
+    const body = await res.json();
+    setLedger((body?.data as any[]) || []);
   }
 
   useEffect(() => { load(); }, []);
 
   async function addEntry() {
-    await supabaseBrowser.from("ledger").insert({ type, amount, date: new Date().toISOString(), description });
+    await fetch("/api/ledger/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, amount, description }),
+    });
     setOpen(false);
     setAmount(0);
     setDescription("");
