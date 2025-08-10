@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,17 +15,18 @@ export default function SuppliersPage() {
   const [notes, setNotes] = useState("");
 
   async function load() {
-    const { data } = await supabaseBrowser.from("suppliers").select("id, name, contact_info, notes").order("name");
-    setRows(data || []);
+    const res = await fetch("/api/suppliers/list", { cache: "no-store" });
+    const body = await res.json();
+    setRows((body?.data as any[]) || []);
   }
 
   useEffect(() => { load(); }, []);
 
   async function save() {
     if (editing) {
-      await supabaseBrowser.from("suppliers").update({ name, contact_info: contact, notes }).eq("id", editing.id);
+      await fetch("/api/suppliers/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: editing.id, name, contact_info: contact, notes }) });
     } else {
-      await supabaseBrowser.from("suppliers").insert({ name, contact_info: contact, notes });
+      await fetch("/api/suppliers/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, contact_info: contact, notes }) });
     }
     setOpen(false);
     setEditing(null);
@@ -36,7 +36,7 @@ export default function SuppliersPage() {
     load();
   }
 
-  async function remove(id: string) { await supabaseBrowser.from("suppliers").delete().eq("id", id); load(); }
+  async function remove(id: string) { await fetch("/api/suppliers/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) }); load(); }
 
   function startEdit(c?: any) {
     if (c) { setEditing(c); setName(c.name); setContact(c.contact_info || ""); setNotes(c.notes || ""); }

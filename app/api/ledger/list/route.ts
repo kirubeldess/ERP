@@ -8,10 +8,12 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data, error } = await supabase
-    .from("suppliers")
-    .select("id, name, contact_info, notes")
+    .from("ledger")
+    .select("id, type, amount, date, description")
     .eq("user_id", user.id)
-    .order("name");
+    .order("date", { ascending: true })
+    .limit(50);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ data });
 } 

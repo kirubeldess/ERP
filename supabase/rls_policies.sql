@@ -192,6 +192,58 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Add customers.user_id column (nullable first)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_name = 'customers' AND column_name = 'user_id'
+  ) THEN
+    ALTER TABLE public.customers ADD COLUMN user_id uuid;
+  END IF;
+END $$;
+
+-- Backfill customers
+DO $$
+DECLARE
+  default_owner uuid := 'REPLACE_WITH_USER_UUID'; -- TODO: set this
+BEGIN
+  IF default_owner = 'REPLACE_WITH_USER_UUID'::uuid THEN
+    RAISE EXCEPTION 'Please set default_owner for customers before running backfill';
+  END IF;
+  UPDATE public.customers SET user_id = default_owner WHERE user_id IS NULL;
+END $$;
+
+-- Enforce NOT NULL and add index for customers
+ALTER TABLE public.customers ALTER COLUMN user_id SET NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_customers_user_id ON public.customers(user_id);
+
+-- Enable RLS for customers
+ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
+
+-- Policies for customers
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='customers' AND policyname='customers_select_own') THEN
+    CREATE POLICY customers_select_own ON public.customers FOR SELECT USING (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='customers' AND policyname='customers_insert_own') THEN
+    CREATE POLICY customers_insert_own ON public.customers FOR INSERT WITH CHECK (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='customers' AND policyname='customers_update_own') THEN
+    CREATE POLICY customers_update_own ON public.customers FOR UPDATE USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='customers' AND policyname='customers_delete_own') THEN
+    CREATE POLICY customers_delete_own ON public.customers FOR DELETE USING (user_id = auth.uid());
+  END IF;
+END $$;
+
+-- Trigger for customers to set user_id default
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.triggers WHERE event_object_table = 'customers' AND trigger_name = 'set_user_id_default_customers'
+  ) THEN
+    CREATE TRIGGER set_user_id_default_customers BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION public.set_user_id_default();
+  END IF;
+END $$;
+
 -- Note: For existing data without user_id, set it manually for each user if needed:
 -- UPDATE public.products  SET user_id = '<USER_UUID>' WHERE user_id IS NULL;
 -- UPDATE public.warehouses SET user_id = '<USER_UUID>' WHERE user_id IS NULL;
