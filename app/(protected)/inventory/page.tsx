@@ -20,6 +20,7 @@ export default function InventoryPage() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
+  const [search, setSearch] = useState("");
 
   const [form, setForm] = useState<Partial<Product>>({ name: "", category: "", quantity: 0, price: 0, warehouse_id: null, supplier_id: null });
 
@@ -83,6 +84,14 @@ export default function InventoryPage() {
 
   const lowStock = useMemo(() => products.filter((p) => (p.quantity ?? 0) < 5), [products]);
 
+  const filteredProducts = useMemo(() => {
+    const lowerSearch = search.toLowerCase();
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(lowerSearch) ||
+      (p.category?.toLowerCase().includes(lowerSearch) ?? false)
+    );
+  }, [products, search]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between">
@@ -90,6 +99,13 @@ export default function InventoryPage() {
         <Button onClick={() => startEdit()}>Add product</Button>
       </div>
       <div className="text-sm text-muted-foreground">Low stock: {lowStock.length}</div>
+
+      <Input
+        placeholder="Search products by name or category"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="my-2"
+      />
 
       <div className="flex-1 overflow-auto mt-2">
         <Table>
@@ -105,7 +121,7 @@ export default function InventoryPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((p) => (
+            {filteredProducts.map((p) => (
               <TableRow key={p.id} className={p.quantity < 5 ? "bg-muted/40" : undefined}>
                 <TableCell>{p.name}</TableCell>
                 <TableCell>{p.category}</TableCell>
@@ -119,9 +135,9 @@ export default function InventoryPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {!products.length && (
+            {!filteredProducts.length && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">No products</TableCell>
+                <TableCell colSpan={7} className="text-center text-muted-foreground">No products found</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -169,4 +185,4 @@ export default function InventoryPage() {
       </Dialog>
     </div>
   );
-} 
+}
